@@ -1,0 +1,7 @@
+*.bak
+*.mat
+*.pyc
+.idea
+data/bvlc_alexnet/bvlc_alexnet.caffemodel
+cron
+tags
