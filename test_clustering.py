@@ -25,6 +25,7 @@ import h5py
 from batchgenerator import BatchGenerator
 from batchsampler import BatchSampler
 import numpy as np
+from trainhelper import trainhelper
 
 
 def runClustering(**params):
@@ -74,6 +75,7 @@ params = {
     'anchors': anchors,
     'dataset': dataset,
     'category': category,
-    'sampled_nbatches': 1000
+    'sampled_nbatches': 1000,
+    'clustering_round': 0
 }
-runClustering(**params)
+trainhelper.runClustering(**params)
