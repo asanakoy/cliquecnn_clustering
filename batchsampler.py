@@ -289,7 +289,6 @@ class BatchSampler(object):
 
             idxs_points = np.where(pval_clique < threshold_pval)[0]
             for idx in idxs_points:
-                assert idx not in clique.samples
                 if not clique.AvailableIndices[idx]:
                     continue
                 else:
