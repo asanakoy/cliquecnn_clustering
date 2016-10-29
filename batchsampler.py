@@ -255,7 +255,13 @@ class BatchSampler(object):
                 self.updateAvailableIndices(clique, sample, temporalWindow=20)
 
             avg_sims_to_clique = self.simMatrix[clique.samples, :].mean(axis=0)[0]
-            random_sampling = np.random.choice(avg_sims_to_clique, points_to_sample_null)
+            mask = np.ones(self.simMatrix.shape[1], dtype=np.bool)
+            mask[clique.samples] = False
+            avg_sims_to_clique = avg_sims_to_clique[mask]
+            assert len(avg_sims_to_clique) + len(clique.samples) == self.simMatrix.shape[1]
+
+            random_sampling = np.random.choice(avg_sims_to_clique, points_to_sample_null,
+                                               replace=False)
             clique_dist = self.fit_distr(random_sampling)
             cdf = lambda sample1d: stats.t.cdf(sample1d, *clique_dist['other_args'],
                                                                 loc=clique_dist['loc'],
@@ -278,10 +284,8 @@ class BatchSampler(object):
 
             idxs_points = np.where(pval_clique < threshold_pval)[0]
             for idx in idxs_points:
-                if idx in clique.samples:
-                    continue
-
-                if clique.AvailableIndices[idx] == False:
+                assert idx not in clique.samples
+                if not clique.AvailableIndices[idx]:
                     continue
                 else:
                     f = self.calculateFlip(clique, idx)
