@@ -133,6 +133,7 @@ class BatchSampler(object):
         else:
             batch = None
 
+
         return batch
 
     def balanceSamplesPerClass(self, idxs, batch_size):
@@ -164,7 +165,7 @@ class BatchSampler(object):
             else:
                 factor = np.max([np.ceil(samples_per_clique/clique_aux.samples.shape[0]), 1.0])
                 assert factor >= 1.0, "Factor is {}".format(str(factor))
-                clique_aux.samples = np.tile(clique_aux.samples, factor)
+                clique_aux.samples = np.tile(clique_aux.samples[0, :], factor)
                 clique_aux.isflipped = np.tile(clique_aux.isflipped, factor)
                 clique_aux.imnames = np.tile(np.asarray(clique_aux.imnames), factor).tolist()
 
@@ -175,6 +176,7 @@ class BatchSampler(object):
                 clique_aux.imnames = [clique_aux.imnames[i] for i in rand_idxs]
 
             # Append the clique to the batch
+            assert clique_aux.samples.shape[0] == clique_aux.isflipped.shape[0] == len(clique_aux.imnames), 'Corrupted sizes in balancing'
             batch.append(clique_aux)
 
         return batch
@@ -232,6 +234,9 @@ class BatchSampler(object):
             x_idx = np.append(x_idx, clique.samples)
             f_ind = np.append(f_ind, clique.isflipped)
             y = np.append(y, np.tile(clique.label, clique.samples.shape[0]))
+            assert x_idx.shape[0] == f_ind.shape[0] == y.shape[0], "Corrupted size of clique while parsing"
+
+        assert x_idx.shape[0] == f_ind.shape[0] == y.shape[0], "Corrupted size of clique while parsing"
         return x_idx, f_ind, y
 
     def transitiveCliqueComputation(self):

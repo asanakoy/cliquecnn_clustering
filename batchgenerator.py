@@ -66,11 +66,19 @@ class BatchGenerator(object):
         :return:
         """
         batches = []
-        assert init_nbatches >= len(self.anchors['anchor']), "Number of batches must be larger than the number of anchors"
+        # Check anchors for datasets which do not have anchors to evaluate
+        if self.anchors is not None:
+            assert init_nbatches >= len(self.anchors['anchor']), "Number of batches must be larger than the number of anchors"
+
         for batch_id in range(init_nbatches):
             print "Computing batch {}".format(batch_id)
-            if batch_id <= len(self.anchors):
-                seed_sample = int(self.anchors['anchor'][batch_id][0])
+
+            # If there are no anchors use random seeds
+            if self.anchors is not None:
+                if batch_id <= len(self.anchors):
+                    seed_sample = int(self.anchors['anchor'][batch_id][0])
+                else:
+                    seed_sample = np.random.randint(self.simMatrix.shape[0])
             else:
                 seed_sample = np.random.randint(self.simMatrix.shape[0])
             batches.append(self.computeBatch(seed_sample))
@@ -87,6 +95,7 @@ class BatchGenerator(object):
         constraints = 'nClique < self.init_nCliques'
         while eval(constraints):
             clique = self.computeClique(seed)
+            assert clique.samples.shape[0] == clique.isflipped.shape[0],"Samples and flips have different size"
             self.cliquePurification(clique)
             # Probably better do temporal augmentation after transitive growing
             self.temporalAugmentation(clique)
@@ -120,10 +129,13 @@ class BatchGenerator(object):
         while eval(constraints):
             idx_avail = np.where(clique.availableIndices)[0]
             p = idx_avail[np.mean(self.simMatrix[clique.samples, idx_avail], axis=0).argmax()]
-            f = self.calculateFlip(clique, p)
-            clique.addSample(p, f, self.imagePath[p])
-            clique.weight = np.linalg.norm(self.simMatrix[clique.samples, clique.samples]) / (len(clique.samples) ** 2.0)
-            self.updateAvailableIndices(clique, p)
+            if p in clique.samples:
+                pass
+            else:
+                f = self.calculateFlip(clique, p)
+                clique.addSample(p, f, self.imagePath[p])
+                clique.weight = np.linalg.norm(self.simMatrix[clique.samples, clique.samples]) / (len(clique.samples) ** 2.0)
+                self.updateAvailableIndices(clique, p)
             nSamples += 1
         return clique
 
@@ -265,9 +277,10 @@ class BatchGenerator(object):
     def replaceAssigment(self, clique, cliqueidxtoremove, generalIdxtoAdd):
 
         # Remove old sample and update params
-        idxsSeq = np.where((np.asarray(self.seqNames) == np.asarray(
+        if self.seqNames is not None:
+            idxsSeq = np.where((np.asarray(self.seqNames) == np.asarray(
             [self.seqNames[clique.samples[cliqueidxtoremove][0]]] * self.simMatrix.shape[0])) == True)[0]
-        clique.availableIndices[idxsSeq] = True
+            clique.availableIndices[idxsSeq] = True
         clique.removeSample(cliqueidxtoremove)
 
         #  Add sample and update params

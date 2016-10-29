@@ -69,10 +69,10 @@ class Clique(object):
         :return:
         """
         fig = plt.figure()
-        vol = np.empty((227, 227, 3 ,1), dtype=np.uint8)
+        vol = np.empty((300, 300, 3, 1), dtype=np.uint8)
         for sample_id, sample in enumerate(self.samples):
             im = Image.open(self.pathToFolder + self.imnames[sample_id][1:-1])
-            # im.resize((300, 300), Image.ANTIALIAS)
+            im = im.resize((300, 300), Image.ANTIALIAS)
             im = np.asarray(im)
             # if self.isflipped[sample_id]:
             #     im = np.fliplr(im)
