@@ -129,7 +129,7 @@ class BatchGenerator(object):
         while eval(constraints):
             idx_avail = np.where(clique.availableIndices)[0]
             search_order = np.mean(self.simMatrix[clique.samples, idx_avail], axis=0).argsort()[::-1]
-            p = search_order[idx_to_add]
+            p = idx_avail[search_order[idx_to_add]]
             if p in clique.samples:
                 pass
             else:
