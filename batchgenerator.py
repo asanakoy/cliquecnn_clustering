@@ -119,16 +119,17 @@ class BatchGenerator(object):
         :param seed:
         :return: clique
         """
-
+        # Initialize cliques and update available indices
         clique = Clique(self.pathToFolder, self.simMatrix.shape[0])
         clique.addSample(seed, self.flipMatrix[seed, seed], self.imagePath[seed])
         self.updateAvailableIndices(clique, seed)
 
-        nSamples = 1
-        constraints = 'nSamples < self.nSamples'
+        idx_to_add = 0
+        constraints = 'clique.samples.shape[0] < self.nSamples'
         while eval(constraints):
             idx_avail = np.where(clique.availableIndices)[0]
-            p = idx_avail[np.mean(self.simMatrix[clique.samples, idx_avail], axis=0).argmax()]
+            search_order = np.mean(self.simMatrix[clique.samples, idx_avail], axis=0).argsort()[::-1]
+            p = search_order[idx_to_add]
             if p in clique.samples:
                 pass
             else:
@@ -136,7 +137,7 @@ class BatchGenerator(object):
                 clique.addSample(p, f, self.imagePath[p])
                 clique.weight = np.linalg.norm(self.simMatrix[clique.samples, clique.samples]) / (len(clique.samples) ** 2.0)
                 self.updateAvailableIndices(clique, p)
-            nSamples += 1
+            idx_to_add += 1
         return clique
 
     def updateAvailableIndices(self, clique, sample, temporalWindow=0):

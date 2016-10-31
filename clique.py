@@ -71,7 +71,7 @@ class Clique(object):
         fig = plt.figure()
         vol = np.empty((300, 300, 3, 1), dtype=np.uint8)
         for sample_id, sample in enumerate(self.samples):
-            im = Image.open(self.pathToFolder + self.imnames[sample_id][1:-1])
+            im = Image.open(self.pathToFolder + self.imnames[sample_id][1:-1]).convert('RGB')
             im = im.resize((300, 300), Image.ANTIALIAS)
             im = np.asarray(im)
             # if self.isflipped[sample_id]:
@@ -105,3 +105,4 @@ class Clique(object):
             ax.cla()
             ax.imshow(volume[..., i], **kw)
             plt.pause(1. / fps)
+
