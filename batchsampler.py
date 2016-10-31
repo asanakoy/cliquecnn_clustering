@@ -27,8 +27,6 @@ import matplotlib.pylab as pylab
 from eval.image_getter import ImageGetterFromMat
 import scipy.stats as stats
 import copy
-
-
 class BatchSampler(object):
     """
     This class encapsulates the data and logic to sample batches from a set of cliques. A batch is a list of cliques
@@ -262,6 +260,7 @@ class BatchSampler(object):
             avg_sims_to_clique = self.simMatrix[clique.samples, :].mean(axis=0)[0]
             mask = np.ones(self.simMatrix.shape[1], dtype=np.bool)
             mask[clique.samples] = False
+            idxs_true_mask = np.where(mask)[0]
             avg_sims_to_clique = avg_sims_to_clique[mask]
             assert len(avg_sims_to_clique) + len(clique.samples) == self.simMatrix.shape[1]
 
@@ -288,7 +287,8 @@ class BatchSampler(object):
             # clique.removeSample(np.asarray(idxs_to_remove, dtype=np.int32))
 
             idxs_points = np.where(pval_clique < threshold_pval)[0]
-            for idx in idxs_points:
+            # Double indexing points from true mask
+            for idx in idxs_true_mask[idxs_points]:
                 if not clique.AvailableIndices[idx]:
                     continue
                 else:

@@ -128,7 +128,7 @@ class BatchGenerator(object):
         constraints = 'clique.samples.shape[0] < self.nSamples'
         while eval(constraints):
             idx_avail = np.where(clique.availableIndices)[0]
-            search_order = np.mean(self.simMatrix[clique.samples, idx_avail], axis=0).argsort()[::-1]
+            search_order = np.max(self.simMatrix[clique.samples, idx_avail], axis=0).argsort()[::-1]
             p = idx_avail[search_order[idx_to_add]]
             if p in clique.samples:
                 pass
@@ -213,46 +213,6 @@ class BatchGenerator(object):
         seed = np.random.choice(sortedIdxs[:int(np.ceil(self.simMatrix.shape[0] * topPercent))][0])
         return seed
 
-    def transitiveCliqueComputation(self, batch):
-        """
-        Filter a clique using transitivity constraints.
-
-        :param clique: clique to be filtered
-        :return: a filtered clique (which can vary in size)
-        """
-
-        sigmaMult = 1.5
-        voting_threshold = 0.95
-        factor = 1.5
-
-        for i in range(self.simMatrix.shape[0]):
-
-            # Do not account the points already assigned
-            for clique in batch:
-                if i in clique.samples:
-                    continue
-
-            minSimtoClique = np.empty(len(batch), dtype=np.int32)
-            for idx, clique in enumerate(batch):
-                minSimtoClique[idx] = np.min(self.simMatrix[clique.samples, i])
-            idx_sorting = minSimtoClique.argsort()
-            minSimtoClique.sort()
-
-            # If one clique is much closer than the others (ie. point i is in the local neighbourhood a clique)
-            if (minSimtoClique[-1] > (minSimtoClique[-2] * factor)) and batch[idx_sorting[-1]].availableIndices[i]:
-
-                # Check distances to points in clique and indicate the inliers in sigma range (ie. each sample in the
-                # clique casts a vote for sample i whether it should be included)
-                selectedClique = batch[idx_sorting[-1]]
-                simToClique = self.simMatrix[selectedClique.samples, i]
-                inlierInd = np.asarray((simToClique - np.mean(simToClique)) >= (-sigmaMult * np.std(simToClique)), dtype=np.bool)
-
-                # Include sample if voting is higher than a threshold
-                if (np.sum(inlierInd) / inlierInd.shape[0]) >= voting_threshold:
-                    self.updateAvailableIndices(selectedClique, i, temporalWindow=10)
-                    f = self.calculateFlip(selectedClique, i)
-                    selectedClique.addSample(i, f, self.imagePath[i])
-        return batch
 
     def temporalAugmentation(self, clique):
         """
