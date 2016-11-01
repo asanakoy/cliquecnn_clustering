@@ -105,4 +105,5 @@ class Clique(object):
             ax.cla()
             ax.imshow(volume[..., i], **kw)
             plt.pause(1. / fps)
+        plt.close()
 

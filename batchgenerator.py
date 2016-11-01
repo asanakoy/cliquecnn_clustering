@@ -46,6 +46,8 @@ class BatchGenerator(object):
             'nSamples': None,
             'anchors': None,
             '_curr_label': 0,
+            'sample_freq': None,
+            'diff_prob': 0.1,
         }
 
         default_params.update(kwargs)
@@ -59,6 +61,7 @@ class BatchGenerator(object):
         :return:
         """
         assert self.simMatrix is not None, "Similarity matrix is empty"
+        self.sample_freq = np.ones(self.simMatrix.shape[0])*0.00001
 
     def generateBatches(self, init_nbatches=100):
         """
@@ -104,6 +107,9 @@ class BatchGenerator(object):
             if clique.samples.shape[0] > 1:
                 clique.label = self._curr_label
                 self._curr_label += 1
+
+                # Update frequency table
+                self.updateFreqTable(clique)
                 batch.append(clique)
 
             seed = self.findDissimilarSeed(batch)
@@ -125,14 +131,21 @@ class BatchGenerator(object):
         self.updateAvailableIndices(clique, seed)
 
         idx_to_add = 0
-        constraints = 'clique.samples.shape[0] < self.nSamples'
+        # Add constraint for checking the freq of samples in cliques
+        frq = np.max([(self.sample_freq / self.sample_freq.sum()) - self.diff_prob, np.zeros(self.sample_freq.shape)],
+                     axis=0)
+        idx_avail = np.where(clique.availableIndices)[0]
+
+        constraints = '(clique.samples.shape[0] < self.nSamples) and (idx_to_add < idx_avail.shape[0])'
         while eval(constraints):
             idx_avail = np.where(clique.availableIndices)[0]
             search_order = np.max(self.simMatrix[clique.samples, idx_avail], axis=0).argsort()[::-1]
             p = idx_avail[search_order[idx_to_add]]
             if p in clique.samples:
                 pass
-            else:
+            # Add constraint for freq samples if random from normal distribution is higher than the freq with which
+            # sample p has been sampled then add it
+            elif frq[p] < np.random.rand():
                 f = self.calculateFlip(clique, p)
                 clique.addSample(p, f, self.imagePath[p])
                 clique.weight = np.linalg.norm(self.simMatrix[clique.samples, clique.samples]) / (len(clique.samples) ** 2.0)
@@ -168,6 +181,11 @@ class BatchGenerator(object):
         # For each point in the clique, compute its avg similarity to the clique (substracting self sim)
         avgSelfSim = np.zeros(clique.samples.shape[0])
         init_samples = clique.samples[:]
+
+        # Add constraint for freq samples
+        frq = np.max([(self.sample_freq / self.sample_freq.sum()) - self.diff_prob, np.zeros(self.sample_freq.shape)],
+                     axis=0)
+
         for idx, sample in enumerate(clique.samples):
             aux_samples = init_samples
             aux_samples = np.delete(aux_samples, idx)
@@ -188,8 +206,10 @@ class BatchGenerator(object):
                 if i in clique.samples or not clique.availableIndices[i]:
                     continue
                 # If the non assigned point i has better avg similarity to the clique than "sample", replace assignment
-                #  and jump to next point
-                if avgSim[i] > avgSelfSim[idx]:
+                # and jump to next point
+                # Add constraint for freq samples if random from normal distribution is higher than the freq with which
+                # sample p has been sampled then add it
+                if avgSim[i] > avgSelfSim[idx] and frq[i] < np.random.rand():
                     self.replaceAssigment(clique, idx, i)
                     break
 
@@ -250,4 +270,12 @@ class BatchGenerator(object):
         clique.weight = np.linalg.norm(self.simMatrix[clique.samples, clique.samples]) / (len(clique.samples) ** 2.0)
         self.updateAvailableIndices(clique, generalIdxtoAdd)
 
+    def updateFreqTable(self, clique):
+        """
+        This function updates the frequency table with the newly computed clique
+        :param clique:
+        :return:
+        """
+
+        self.sample_freq[clique.samples] += 1
 

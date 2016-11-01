@@ -25,6 +25,7 @@ import h5py
 from batchgenerator import BatchGenerator
 from batchsampler import BatchSampler
 import numpy as np
+import scipy.io as sio
 from trainhelper import trainhelper
 
 
@@ -41,22 +42,27 @@ def runClustering(**params):
     params['batches'] = init_batches
     sampler = BatchSampler(**params)
     sampler.updateCliqueSampleProb(np.ones(len(sampler.cliques)))
+    for i in range(30):
+        sampler.cliques[i].visualize()
 
-    for i in range(params['sampled_nbatches']):
-        print "Sampling batch {}".format(i)
-        batch = sampler.sampleBatch(batch_size=128, max_cliques_per_batch=8, mode='heuristic')
 
-    sampler.updateSimMatrix()
-    sampler.transitiveCliqueUpdate()
+dataset = 'Caltech101'
+category = 'Caltech101'
 
-dataset = 'OlympicSports'
-category = 'long_jump'
-pathtosim = '/net/hciserver03/storage/mbautist/Desktop/workspace/cnn_similarities/compute_similarities/sim_matrices/hog-lda/simMatrix_long_jump.mat'
-pathtosim_avg = '/net/hciserver03/storage/mbautist/Desktop/workspace/cnn_similarities/datasets/OlympicSports/similarities_lda/d_long_jump.mat'
-data = h5py.File(pathtosim, 'r')
-data2 = h5py.File(pathtosim_avg, 'r')
-pathtoimg = '/net/hciserver03/storage/mbautist/Desktop/workspace/cnn_similarities/datasets/OlympicSports/image_data/imagePaths_long_jump.txt'
-pathtocrops = '/export/home/mbautist/Desktop/workspace/cnn_similarities/datasets/OlympicSports/crops/long_jump'
+pathtosim_avg = '/export/home/mbautist/Desktop/workspace/cnn_similarities/datasets/Caltech101/sim/simMatrix_INIT.npy'
+
+# data2 = h5py.File(pathtosim_avg, 'r')
+simMatrix = np.load(pathtosim_avg)
+# data2 = sio.loadmat(pathtosim_avg)
+# simMatrix = (data2['simMatrix'][()] + data2['simMatrix'][()].T) / 2.0
+
+
+flipMatrix = np.zeros(simMatrix.shape)
+
+pathtoimg = '/export/home/mbautist/Desktop/workspace/cnn_similarities/datasets/Caltech101/image_paths.txt'
+pathtocrops = '/export/home/mbautist/Desktop/workspace/cnn_similarities/datasets/Caltech101/'
+
+
 pathtoanchors = '/net/hciserver03/storage/mbautist/Desktop/workspace/cnn_similarities/datasets/OlympicSports/labels_HIWIs/processed_labels/anchors_long_jump.mat'
 anchors = h5py.File(pathtoanchors, 'r')
 with open(pathtoimg) as f:
@@ -65,17 +71,19 @@ seqnames = [n[2:25] for n in imnames]
 
 
 params = {
-    'simMatrix': (data2['d'][()] + data2['d'][()]) / 2.0,
-    'flipMatrix': data['flipval'][()],
-    'seqNames': seqnames,
+    'simMatrix': simMatrix,
+    'flipMatrix': flipMatrix,
+    'seqNames': None,
     'imagePath': imnames,
     'pathToFolder': pathtocrops,
-    'init_nCliques': 10,
-    'nSamples': 8,
-    'anchors': anchors,
+    'init_nCliques': 5,
+    'nSamples': 5,
+    'anchors': None,
     'dataset': dataset,
     'category': category,
     'sampled_nbatches': 1000,
-    'clustering_round': 0
+    'clustering_round': 0,
+    'diff_prob': 0.1,
+
 }
-trainhelper.runClustering(**params)
+runClustering(**params)
