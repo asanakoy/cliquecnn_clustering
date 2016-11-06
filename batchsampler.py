@@ -156,7 +156,7 @@ class BatchSampler(object):
             # If size of clique bigger than the number of samples per clique choose at random, otherwise replicate first
             # to choose at random afterwards
             if clique_aux.samples[0] > samples_per_clique:
-                rand_idxs = np.random.choice(clique_aux.samples.shape[0], samples_per_clique).astype(dtype=np.int32)
+                rand_idxs = np.random.choice(clique_aux.samples.shape[0], samples_per_clique, replace=False).astype(dtype=np.int32)
                 clique_aux.samples = clique_aux.samples[rand_idxs]
                 clique_aux.isflipped = clique_aux.isflipped[rand_idxs]
                 clique_aux.imnames = [clique_aux.imnames[i] for i in rand_idxs]
@@ -167,7 +167,7 @@ class BatchSampler(object):
                 clique_aux.isflipped = np.tile(clique_aux.isflipped, factor)
                 clique_aux.imnames = np.tile(np.asarray(clique_aux.imnames), factor).tolist()
 
-                rand_idxs = np.random.choice(clique_aux.samples.shape[0], samples_per_clique).astype(dtype=np.int32)
+                rand_idxs = np.random.choice(clique_aux.samples.shape[0], samples_per_clique, replace=False).astype(dtype=np.int32)
 
                 clique_aux.samples = clique_aux.samples[rand_idxs]
                 clique_aux.isflipped = clique_aux.isflipped[rand_idxs]
