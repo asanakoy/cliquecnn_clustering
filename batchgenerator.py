@@ -23,6 +23,7 @@
 
 import numpy as np
 from clique import Clique
+from tqdm import tqdm
 import time
 
 class BatchGenerator(object):
@@ -73,9 +74,7 @@ class BatchGenerator(object):
         if self.anchors is not None:
             assert init_nbatches >= len(self.anchors['anchor']), "Number of batches must be larger than the number of anchors"
 
-        for batch_id in range(init_nbatches):
-            print "Computing batch {}".format(batch_id)
-
+        for batch_id in tqdm(range(init_nbatches)):
             # If there are no anchors use random seeds
             if self.anchors is not None:
                 if batch_id <= len(self.anchors):
