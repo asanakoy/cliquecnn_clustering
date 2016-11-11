@@ -27,6 +27,8 @@ import matplotlib.pylab as pylab
 from eval.image_getter import ImageGetterFromMat
 import scipy.stats as stats
 import copy
+
+
 class BatchSampler(object):
     """
     This class encapsulates the data and logic to sample batches from a set of cliques. A batch is a list of cliques
@@ -42,11 +44,15 @@ class BatchSampler(object):
             'cliqueSimMatrix': np.empty(0),
             'dataset': None,
             'category': None,
+            'seed': None
         }
 
         default_params.update(kwargs)
         for k in default_params.keys():
             self.__setattr__(k, default_params[k])
+        self.random_state = np.random.RandomState(self.seed)
+        print 'BatchSampler::random seed = {}'.format(self.seed)
+
         for batch in kwargs['batches']:
             for clique in batch:
                 assert clique.samples.shape[0] > 1, 'Adding a clique of a single sample'
@@ -118,7 +124,7 @@ class BatchSampler(object):
 
         if mode == 'random':
             # Select random clique indices
-            idxs = np.random.choice(len(self.cliques), int(max_cliques_per_batch), replace=False,
+            idxs = self.random_state.choice(len(self.cliques), int(max_cliques_per_batch), replace=False,
                                     p=self.cliqueSampleProb)
         elif mode == 'heuristic':
             # Select heuristic clique indices
@@ -156,7 +162,7 @@ class BatchSampler(object):
             # If size of clique bigger than the number of samples per clique choose at random, otherwise replicate first
             # to choose at random afterwards
             if clique_aux.samples[0] > samples_per_clique:
-                rand_idxs = np.random.choice(clique_aux.samples.shape[0], np.min([clique_aux.samples.shape[0], samples_per_clique]), replace=False).astype(dtype=np.int32)
+                rand_idxs = self.random_state.choice(clique_aux.samples.shape[0], np.min([clique_aux.samples.shape[0], samples_per_clique]), replace=False).astype(dtype=np.int32)
                 clique_aux.samples = clique_aux.samples[rand_idxs]
                 clique_aux.isflipped = clique_aux.isflipped[rand_idxs]
                 clique_aux.imnames = [clique_aux.imnames[i] for i in rand_idxs]
@@ -167,7 +173,7 @@ class BatchSampler(object):
                 clique_aux.isflipped = np.tile(clique_aux.isflipped, factor)
                 clique_aux.imnames = np.tile(np.asarray(clique_aux.imnames), factor).tolist()
 
-                rand_idxs = np.random.choice(clique_aux.samples.shape[0], np.min([clique_aux.samples.shape[0], samples_per_clique]), replace=False).astype(dtype=np.int32)
+                rand_idxs = self.random_state.choice(clique_aux.samples.shape[0], np.min([clique_aux.samples.shape[0], samples_per_clique]), replace=False).astype(dtype=np.int32)
 
                 clique_aux.samples = clique_aux.samples[rand_idxs]
                 clique_aux.isflipped = clique_aux.isflipped[rand_idxs]
@@ -187,7 +193,7 @@ class BatchSampler(object):
         """
         # Sample first clique based on loss
         idxs = []
-        seed_clique = np.random.choice(len(self.cliques), 1, p=self.cliqueSampleProb)
+        seed_clique = self.random_state.choice(len(self.cliques), 1, p=self.cliqueSampleProb)
         idxs.append(seed_clique)
 
         # Start search cliques from the least similar
@@ -264,7 +270,7 @@ class BatchSampler(object):
             avg_sims_to_clique = avg_sims_to_clique[mask]
             assert len(avg_sims_to_clique) + len(clique.samples) == self.simMatrix.shape[1]
 
-            random_sampling = np.random.choice(avg_sims_to_clique, points_to_sample_null,
+            random_sampling = self.random_state.choice(avg_sims_to_clique, points_to_sample_null,
                                                replace=False)
             clique_dist = self.fit_distr(random_sampling)
             cdf = lambda sample1d: stats.t.cdf(sample1d, *clique_dist['other_args'],

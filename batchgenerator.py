@@ -35,8 +35,6 @@ class BatchGenerator(object):
     def __init__(self, **kwargs):
         """
         """
-
-
         default_params = {
             'simMatrix': None,
             'flipMatrix': None,
@@ -49,11 +47,14 @@ class BatchGenerator(object):
             '_curr_label': 0,
             'sample_freq': None,
             'diff_prob': 0.1,
+            'seed': None
         }
 
         default_params.update(kwargs)
         for k in default_params.keys():
             self.__setattr__(k, default_params[k])
+        self.random_state = np.random.RandomState(self.seed)
+        print 'BatchGenerator::random seed = {}'.format(self.seed)
         self._check_params()
 
     def _check_params(self):
@@ -80,9 +81,9 @@ class BatchGenerator(object):
                 if batch_id <= len(self.anchors):
                     seed_sample = int(self.anchors['anchor'][batch_id][0])
                 else:
-                    seed_sample = np.random.randint(self.simMatrix.shape[0])
+                    seed_sample = self.random_state.randint(self.simMatrix.shape[0])
             else:
-                seed_sample = np.random.randint(self.simMatrix.shape[0])
+                seed_sample = self.random_state.randint(self.simMatrix.shape[0])
             batches.append(self.computeBatch(seed_sample))
         return batches
 
@@ -144,7 +145,7 @@ class BatchGenerator(object):
                 pass
             # Add constraint for freq samples if random from normal distribution is higher than the freq with which
             # sample p has been sampled then add it
-            elif frq[p] < np.random.rand():
+            elif frq[p] < self.random_state.rand():
                 f = self.calculateFlip(clique, p)
                 clique.addSample(p, f, self.imagePath[p])
                 clique.weight = np.linalg.norm(self.simMatrix[clique.samples, clique.samples]) / (len(clique.samples) ** 2.0)
@@ -208,7 +209,7 @@ class BatchGenerator(object):
                 # and jump to next point
                 # Add constraint for freq samples if random from normal distribution is higher than the freq with which
                 # sample p has been sampled then add it
-                if avgSim[i] > avgSelfSim[idx] and frq[i] < np.random.rand():
+                if avgSim[i] > avgSelfSim[idx] and frq[i] < self.random_state.rand():
                     self.replaceAssigment(clique, idx, i)
                     break
 
@@ -229,7 +230,7 @@ class BatchGenerator(object):
         for clique in batch:
             allIdxs = np.append(allIdxs, clique.samples)
         sortedIdxs = np.min(self.simMatrix[allIdxs.reshape(-1, 1)], axis=0).argsort()
-        seed = np.random.choice(sortedIdxs[:int(np.ceil(self.simMatrix.shape[0] * topPercent))][0])
+        seed = self.random_state.choice(sortedIdxs[:int(np.ceil(self.simMatrix.shape[0] * topPercent))][0])
         return seed
 
 
