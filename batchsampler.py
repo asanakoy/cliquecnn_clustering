@@ -129,15 +129,13 @@ class BatchSampler(object):
         elif mode == 'heuristic':
             # Select heuristic clique indices
             idxs = self.computeIndicesWithHeuristic(max_cliques_per_batch)
-
+        assert len(idxs) == max_cliques_per_batch, 'Got num cliques({}) != max_cliques_per_batch'.format(len(idxs))
         # Balance the number of samples per clique in the batch (cliques may contained repeated samples, responsability
         # delegated to transformations to change them)
         if idxs.shape[0] > 1:
             batch = self.balanceSamplesPerClass(idxs, batch_size)
         else:
             batch = None
-
-
         return batch
 
     def balanceSamplesPerClass(self, idxs, batch_size):
@@ -151,9 +149,11 @@ class BatchSampler(object):
         batch = []
         samples_per_clique = int(np.floor(batch_size/len(idxs)))
         remainder = batch_size % len(idxs)
+        assert remainder == 0, 'We haven\'t fixed the bug yet. So remainder > 0 is not allowed for now.'
         for itt, i in enumerate(idxs):
             # If on last iteration add the remainder of samples
             if itt == len(idxs):
+                # FIXME: fix the bug here. This code is never called
                 samples_per_clique += remainder
 
             # Copy the clique not to modify the original clique for future usage
@@ -161,15 +161,16 @@ class BatchSampler(object):
 
             # If size of clique bigger than the number of samples per clique choose at random, otherwise replicate first
             # to choose at random afterwards
-            if clique_aux.samples[0] > samples_per_clique:
+            if clique_aux.samples.shape[0] > samples_per_clique:
                 rand_idxs = self.random_state.choice(clique_aux.samples.shape[0], np.min([clique_aux.samples.shape[0], samples_per_clique]), replace=False).astype(dtype=np.int32)
                 clique_aux.samples = clique_aux.samples[rand_idxs]
                 clique_aux.isflipped = clique_aux.isflipped[rand_idxs]
                 clique_aux.imnames = [clique_aux.imnames[i] for i in rand_idxs]
             else:
-                factor = np.max([np.ceil(samples_per_clique/clique_aux.samples.shape[0]), 2.0])
+                clique_aux.samples = clique_aux.samples.reshape(-1)
+                factor = np.max([int(np.ceil(samples_per_clique / float(clique_aux.samples.shape[0]))), 2])
                 assert factor >= 1.0, "Factor is {}".format(str(factor))
-                clique_aux.samples = np.tile(clique_aux.samples[0, :], factor)
+                clique_aux.samples = np.tile(clique_aux.samples, factor)
                 clique_aux.isflipped = np.tile(clique_aux.isflipped, factor)
                 clique_aux.imnames = np.tile(np.asarray(clique_aux.imnames), factor).tolist()
 
