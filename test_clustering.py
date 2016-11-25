@@ -27,9 +27,9 @@ from batchsampler import BatchSampler
 import numpy as np
 import scipy.io as sio
 from trainhelper import trainhelper
+from tqdm import tqdm
 
-
-def runClustering(**params):
+def runClustering(seed=None, **params):
     """
     Run clustering assignment procedure and return arrays for BatchLoader in a dict
     :param kwargs_generator: arguments for generator
@@ -37,11 +37,27 @@ def runClustering(**params):
     :return: Dict of arrays for BatchLoader
     """
 
-    generator = BatchGenerator(**params)
-    init_batches = generator.generateBatches(init_nbatches=100)
-    params['batches'] = init_batches
-    sampler = BatchSampler(**params)
-    sampler.updateCliqueSampleProb(np.ones(len(sampler.cliques)))
+    generator = BatchGenerator(sim_matrix=params['sim_matrix'],
+                               flipvals=params['flipvals'],
+                               seq_names=params['seq_names'],
+                               crops_dir=params['crops_dir'],
+                               relative_image_pathes=params['relative_image_pathes'],
+                               num_cliques_per_initial_batch=params['num_cliques_per_initial_batch'],
+                               num_samples_per_clique=params['num_samples_per_clique'],
+                               anchors=params['anchors'],
+                               seed=seed)
+    init_batches = generator.generate_batches(num_initial_batches=100)
+    sampler = BatchSampler(batches=init_batches,
+                           sim_matrix=sim_matrix,
+                           flipvals=flipvals,
+                           seq_names=params['seq_names'],
+                           crops_dir=params['crops_dir'],
+                           relative_image_pathes=params['relative_image_pathes'],
+                           seed=seed)
+    for i in tqdm(range(10)):
+        batch = sampler.sample_batch(batch_size=128,
+                                     max_cliques_per_batch=8,
+                                     mode='random')
     for i in range(30):
         sampler.cliques[i].visualize()
 
@@ -52,12 +68,12 @@ category = 'Caltech101'
 pathtosim_avg = '/export/home/mbautist/Desktop/workspace/cnn_similarities/datasets/Caltech101/sim/simMatrix_INIT.npy'
 
 # data2 = h5py.File(pathtosim_avg, 'r')
-simMatrix = np.load(pathtosim_avg)
+sim_matrix = np.load(pathtosim_avg)
 # data2 = sio.loadmat(pathtosim_avg)
-# simMatrix = (data2['simMatrix'][()] + data2['simMatrix'][()].T) / 2.0
+# sim_matrix = (data2['sim_matrix'][()] + data2['sim_matrix'][()].T) / 2.0
 
 
-flipMatrix = np.zeros(simMatrix.shape)
+flipvals = np.zeros(sim_matrix.shape)
 
 pathtoimg = '/export/home/mbautist/Desktop/workspace/cnn_similarities/datasets/Caltech101/image_paths.txt'
 pathtocrops = '/export/home/mbautist/Desktop/workspace/cnn_similarities/datasets/Caltech101/'
@@ -71,17 +87,17 @@ seqnames = [n[2:25] for n in imnames]
 
 
 params = {
-    'simMatrix': simMatrix,
-    'flipMatrix': flipMatrix,
-    'seqNames': None,
-    'imagePath': imnames,
-    'pathToFolder': pathtocrops,
-    'init_nCliques': 5,
-    'nSamples': 5,
+    'sim_matrix': sim_matrix,
+    'flipvals': flipvals,
+    'seq_names': None,
+    'relative_image_pathes': imnames,
+    'crops_dir': pathtocrops,
+    'num_cliques_per_initial_batch': 5,
+    'num_samples_per_clique': 5,
     'anchors': None,
     'dataset': dataset,
     'category': category,
-    'sampled_nbatches': 1000,
+    'num_batches_to_sample': 1000,
     'clustering_round': 0,
     'diff_prob': 0.1,
 

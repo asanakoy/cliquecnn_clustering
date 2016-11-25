@@ -28,7 +28,7 @@ from PIL import Image
 
 class Clique(object):
 
-    def __init__(self, pathToFolder, nsamples):
+    def __init__(self, crops_dir, nsamples):
         """
         Class for encapsulating and visualizing cliques
         """
@@ -38,22 +38,24 @@ class Clique(object):
         self.weight = -1
         self.imnames = []
         self.label = None
-        self.pathToFolder = pathToFolder
+        self.crops_dir = crops_dir
 
-    def addSample(self, s, f, imname):
+    def add_sample(self, s, f, imname):
         """
         Add a sample to a clique
         :param s: Sample to add
         :param f: Flip indicator
         :return:
         """
+        assert np.isscalar(s), 'sample {} is not a scalar'.format(s)
+        assert np.isscalar(f), 'flipval {} is not a scalar'.format(f)
         assert s not in self.samples, "Sample {} already in clique {}".format(s, self.samples)
         self.samples = np.append(self.samples, s)
-        self.samples = self.samples.reshape(-1, 1)
+        self.samples = self.samples.reshape(-1)
         self.isflipped = np.append(self.isflipped, f)
         self.imnames.append(imname)
 
-    def removeSample(self, idx):
+    def remove_sample(self, idx):
         """
         Remove a sample from a clique given an index
         :param idx:
@@ -69,19 +71,22 @@ class Clique(object):
         :return:
         """
         fig = plt.figure()
-        vol = np.empty((300, 300, 3, 1), dtype=np.uint8)
+        plt.cla()
+        vol = np.empty((300, 300, 3, 0), dtype=np.uint8)
+        imnames = list()
         for sample_id, sample in enumerate(self.samples):
-            im = Image.open(self.pathToFolder + self.imnames[sample_id][1:-1]).convert('RGB')
+            im = Image.open(self.crops_dir + self.imnames[sample_id][1:-1]).convert('RGB')
+            imnames.append(self.imnames[sample_id][1:-1])
+
             im = im.resize((300, 300), Image.ANTIALIAS)
             im = np.asarray(im)
             # if self.isflipped[sample_id]:
             #     im = np.fliplr(im)
             im = np.expand_dims(im, axis=3)
             vol = np.append(vol, im, axis=3)
-        self.implay(vol)
+        self.implay(vol, imnames=imnames)
 
-
-    def implay(self, volume, fps=2, ax=None, **kw):
+    def implay(self, volume, imnames=None, fps=2, ax=None, **kw):
         """Play a sequence of image in `volume` as a video.
         Parameters
         ----------
@@ -100,10 +105,14 @@ class Clique(object):
         """
         if not ax:
             ax = plt.gca()
+            ax.cla()
         num_frames = volume.shape[-1]
         for i in xrange(num_frames):
             ax.cla()
             ax.imshow(volume[..., i], **kw)
+            if imnames is not None:
+                ax.set_title(imnames[i])
             plt.pause(1. / fps)
+            pass
         plt.close()
 
