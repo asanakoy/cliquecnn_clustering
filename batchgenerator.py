@@ -20,6 +20,8 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # ++
+#
+# 24.11.2016 Fixed, refactored: Artsiom Sanakoyeu
 
 import numpy as np
 from clique import Clique
@@ -84,6 +86,7 @@ class BatchGenerator(object):
         for batch_id in tqdm(range(num_initial_batches)):
             # If there are no anchors use random seeds
             if self.anchors is not None:
+                # FIXME: < len(self.anchors['anchor']) ?
                 if batch_id <= len(self.anchors):
                     seed_sample = int(self.anchors['anchor'][batch_id][0])
                 else:
@@ -140,11 +143,14 @@ class BatchGenerator(object):
         # Add constraint for checking the freq of samples in cliques
         frq = np.max([(self.sample_freq / self.sample_freq.sum()) - self.diff_prob,
                       np.zeros(self.sample_freq.shape)], axis=0)
-        idx_avail = np.where(clique.availableIndices)[0]
+        idx_avail = np.where(clique.available_indices)[0]
 
         while (len(clique.samples) < self.num_samples_per_clique) and (idx_to_add < idx_avail.shape[0]):
-            idx_avail = np.where(clique.availableIndices)[0]
+            idx_avail = np.where(clique.available_indices)[0]
+            # FIXME: here we choose the point that has max similarity to some point in clique. We can get a line structure instead of a compact cluster.
             search_order = np.max(self.sim_matrix[clique.samples.reshape(-1, 1), idx_avail], axis=0).argsort()[::-1]
+            # FIXME: BUG? idx_to_add must be always 0. Because on each step idx_avail will be changed.
+            # FIXME: So now we don't get the best cliques
             p = idx_avail[search_order[idx_to_add]]
             if p in clique.samples:
                 pass
@@ -170,11 +176,11 @@ class BatchGenerator(object):
             return
 
         if temporalWindow:
-            clique.availableIndices[sample-temporalWindow: sample+temporalWindow] = False
+            clique.available_indices[sample - temporalWindow: sample + temporalWindow] = False
         else:
             # No temporal window, take the whole sequence
             ind_not_seq = np.asarray(self.seq_names) != np.asarray([self.seq_names[sample]] * self.sim_matrix.shape[0])
-            clique.availableIndices = ~((~np.asarray(clique.availableIndices)) | (~np.asarray(ind_not_seq)))
+            clique.available_indices = ~((~np.asarray(clique.available_indices)) | (~np.asarray(ind_not_seq)))
 
     def clique_purification(self, clique):
         """
@@ -203,12 +209,14 @@ class BatchGenerator(object):
             # Sort points with respect to the avg similarity to the current clique minus the temptative point to extract
             aux_samples = init_samples
             aux_samples = np.delete(aux_samples, idx)
+
+            # FIXME: here we choose the point that has max similarity to some point in clique. We can get a line structure instead of a compact cluster.
             avgSim = np.max(self.sim_matrix[:, aux_samples], axis=1)
             nearest_samples = avgSim.reshape(1, -1).argsort()[0][::-1]
             for i in nearest_samples:
 
                 # Filter points that are already assigned to the clique or are not available
-                if i in clique.samples or not clique.availableIndices[i]:
+                if i in clique.samples or not clique.available_indices[i]:
                     continue
                 # If the non assigned point i has better avg similarity to the clique than "sample", replace assignment
                 # and jump to next point
@@ -264,8 +272,8 @@ class BatchGenerator(object):
         if self.seq_names is not None:
             idxsSeq = np.where((np.asarray(self.seq_names) ==
                                 np.asarray([self.seq_names[clique.samples[cliqueidxtoremove]]] * self.sim_matrix.shape[0])) == True)[0]
-            clique.availableIndices[idxsSeq] = True
-        clique.remove_sample(cliqueidxtoremove)
+            clique.available_indices[idxsSeq] = True
+        clique.remove_seq(cliqueidxtoremove)
 
         #  Add sample and update params
         f = self.calculate_flip(clique, generalIdxtoAdd)

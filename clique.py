@@ -34,7 +34,7 @@ class Clique(object):
         """
         self.samples = np.empty(0, dtype=np.int32)
         self.isflipped = np.empty(0, dtype=np.bool)
-        self.availableIndices = np.asarray([True] * nsamples, dtype=np.bool)
+        self.available_indices = np.asarray([True] * nsamples, dtype=np.bool)
         self.weight = -1
         self.imnames = []
         self.label = None
