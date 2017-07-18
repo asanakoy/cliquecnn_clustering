@@ -316,7 +316,7 @@ class BatchSampler(object):
             #     # If this sim could come from random points then remove sample from clique
             #     if (1.0 - cdf(avg_sim_aux)) > threshold_pval*10:
             #         idxs_to_remove.append(idx_sample)
-            # clique.remove_seq(np.asarray(idxs_to_remove, dtype=np.int32))
+            # clique.remove_sample(np.asarray(idxs_to_remove, dtype=np.int32))
 
             idxs_points = np.where(pval_clique < threshold_pval)[0]
             # Double indexing points from true mask

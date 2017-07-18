@@ -273,7 +273,7 @@ class BatchGenerator(object):
             idxsSeq = np.where((np.asarray(self.seq_names) ==
                                 np.asarray([self.seq_names[clique.samples[cliqueidxtoremove]]] * self.sim_matrix.shape[0])) == True)[0]
             clique.available_indices[idxsSeq] = True
-        clique.remove_seq(cliqueidxtoremove)
+        clique.remove_sample(cliqueidxtoremove)
 
         #  Add sample and update params
         f = self.calculate_flip(clique, generalIdxtoAdd)
